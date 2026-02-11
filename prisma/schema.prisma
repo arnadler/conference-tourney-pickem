@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── NextAuth models ────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── App models ─────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  picks    Pick[]
+}
+
+model Tournament {
+  id             String   @id @default(cuid())
+  conferenceName String
+  year           Int
+  timezone       String   @default("America/New_York")
+  firstGameStart DateTime
+  numRounds      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  games Game[]
+  picks Pick[]
+
+  @@unique([conferenceName, year])
+}
+
+model Game {
+  id           String   @id @default(cuid())
+  tournamentId String
+  round        Int
+  gameNumber   Int
+  position     Int
+  startTime    DateTime?
+
+  topSeedLabel    String?
+  bottomSeedLabel String?
+
+  topTeamName    String?
+  bottomTeamName String?
+
+  topSourceGameNumber    Int?
+  bottomSourceGameNumber Int?
+
+  nextGameNumber Int?
+  nextSlot       String?
+
+  winnerTeamName   String?
+  resultEnteredBy  String?
+  resultEnteredAt  DateTime?
+
+  isBye Boolean @default(false)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  picks      Pick[]
+
+  @@unique([tournamentId, gameNumber])
+}
+
+model Pick {
+  id           String  @id @default(cuid())
+  userId       String
+  tournamentId String
+  gameId       String
+  gameNumber   Int
+  selectedTeam String
+  isCorrect    Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  game       Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([userId, tournamentId])
+}

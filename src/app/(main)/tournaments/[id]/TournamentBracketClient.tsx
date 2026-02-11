@@ -1,0 +1,80 @@
+"use client";
+
+import { useCallback } from "react";
+import Bracket from "@/components/Bracket";
+
+interface GameData {
+  id: string;
+  tournamentId: string;
+  round: number;
+  gameNumber: number;
+  position: number;
+  startTime: string | null;
+  topSeedLabel: string | null;
+  bottomSeedLabel: string | null;
+  topTeamName: string | null;
+  bottomTeamName: string | null;
+  topSourceGameNumber: number | null;
+  bottomSourceGameNumber: number | null;
+  nextGameNumber: number | null;
+  nextSlot: string | null;
+  winnerTeamName: string | null;
+  resultEnteredBy: string | null;
+  resultEnteredAt: string | null;
+  isBye: boolean;
+}
+
+interface Props {
+  games: GameData[];
+  numRounds: number;
+  initialPicks: Record<number, string>;
+  results: Record<number, string>;
+  locked: boolean;
+  tournamentId: string;
+  loggedIn: boolean;
+}
+
+export default function TournamentBracketClient({
+  games,
+  numRounds,
+  initialPicks,
+  results,
+  locked,
+  tournamentId,
+  loggedIn,
+}: Props) {
+  const handleSave = useCallback(
+    async (picks: Record<number, string>) => {
+      if (!loggedIn) return;
+
+      const picksArray = Object.entries(picks).map(([gameNumber, selectedTeam]) => ({
+        gameNumber: Number(gameNumber),
+        selectedTeam,
+      }));
+
+      const res = await fetch("/api/picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tournamentId, picks: picksArray }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save picks");
+      }
+    },
+    [tournamentId, loggedIn]
+  );
+
+  // Cast games to the expected type (all fields match)
+  return (
+    <Bracket
+      games={games as any}
+      numRounds={numRounds}
+      picks={initialPicks}
+      results={results}
+      locked={locked || !loggedIn}
+      onSave={handleSave}
+    />
+  );
+}
