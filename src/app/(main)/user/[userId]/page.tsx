@@ -78,8 +78,8 @@ export default async function UserDetailPage({
                         <td className="px-4 py-2 text-slate-500">#{game.gameNumber}</td>
                         <td className="px-4 py-2 text-slate-600">R{game.round}</td>
                         <td className="px-4 py-2 text-slate-700">
-                          {game.topSeedLabel || game.topTeamName || "TBD"} vs{" "}
-                          {game.bottomSeedLabel || game.bottomTeamName || "TBD"}
+                          {game.topTeamName || game.topSeedLabel || "TBD"} vs{" "}
+                          {game.bottomTeamName || game.bottomSeedLabel || "TBD"}
                         </td>
                         <td className="px-4 py-2 font-medium">
                           {pick?.selectedTeam || (

@@ -19,8 +19,9 @@ export function calculateTournamentScores(
   allPicks: (Pick & { user: { name: string | null; email: string | null } })[],
 ): UserScore[] {
   const userMap = new Map<string, UserScore>();
+  const gameById = new Map(games.map((g) => [g.id, g]));
+  const possiblePoints = games.filter((g) => !g.isBye).reduce((sum, g) => sum + g.round, 0);
 
-  // Group picks by user
   for (const pick of allPicks) {
     if (!userMap.has(pick.userId)) {
       userMap.set(pick.userId, {
@@ -30,18 +31,17 @@ export function calculateTournamentScores(
         score: 0,
         totalPicks: 0,
         correctPicks: 0,
-        possiblePoints: games.filter((g) => !g.isBye).length,
+        possiblePoints,
       });
     }
 
     const entry = userMap.get(pick.userId)!;
     entry.totalPicks++;
 
-    // Find the game for this pick
-    const game = games.find((g) => g.id === pick.gameId);
+    const game = gameById.get(pick.gameId);
     if (game?.winnerTeamName) {
       if (pick.selectedTeam === game.winnerTeamName) {
-        entry.score++;
+        entry.score += game.round; // points = round number (R1=1, R2=2, R3=3, R4=4)
         entry.correctPicks++;
       }
     }

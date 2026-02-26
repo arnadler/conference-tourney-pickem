@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { calculateTournamentScores, type UserScore } from "@/lib/scoring";
+import { auth } from "@/lib/auth";
+import { calculateTournamentScores } from "@/lib/scoring";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -11,6 +12,8 @@ export default async function TournamentStandingsPage({
   params: Promise<{ tournamentId: string }>;
 }) {
   const { tournamentId } = await params;
+  const session = await auth();
+  const currentUserId = session?.user?.id ?? null;
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -58,7 +61,10 @@ export default async function TournamentStandingsPage({
             </thead>
             <tbody>
               {scores.map((s, i) => (
-                <tr key={s.userId} className="border-b border-slate-100 last:border-0">
+                <tr
+                  key={s.userId}
+                  className={`border-b border-slate-100 last:border-0 ${s.userId === currentUserId ? "bg-blue-50" : ""}`}
+                >
                   <td className="px-4 py-3 text-slate-500 font-mono">{i + 1}</td>
                   <td className="px-4 py-3">
                     <Link

@@ -1,6 +1,4 @@
-import type { Game, Pick } from "@/generated/prisma/client";
-
-export type GameWithPicks = Game & { picks?: Pick[] };
+import type { Game } from "@/generated/prisma/client";
 
 /**
  * Check if a tournament is locked (past first game start time).
@@ -29,26 +27,32 @@ export function validateBracketConsistency(
       continue;
     }
 
-    // For games that depend on source games, check the pick is consistent
+    if (game.isBye) continue;
+
+    // Enforce prerequisite source picks for downstream selections.
     if (game.topSourceGameNumber != null) {
       const sourceGame = gameMap.get(game.topSourceGameNumber);
-      if (sourceGame && !sourceGame.isBye) {
-        const sourcePick = picks[game.topSourceGameNumber];
-        // If we picked a team in this game's top slot, it must have won the source game
-        if (selectedTeam && sourcePick !== undefined) {
-          // The team in the top slot should be the winner of the source game
-          // (this team must match the source pick if the source feeds the top)
-        }
+      if (!sourceGame) {
+        errors.push(
+          `Game ${gameNum} has invalid bracket wiring: source game ${game.topSourceGameNumber} does not exist.`
+        );
+      } else if (!sourceGame.isBye && !Object.hasOwn(picks, game.topSourceGameNumber)) {
+        errors.push(
+          `Pick for game ${gameNum} requires a winner pick for game ${game.topSourceGameNumber} first.`
+        );
       }
     }
 
     if (game.bottomSourceGameNumber != null) {
       const sourceGame = gameMap.get(game.bottomSourceGameNumber);
-      if (sourceGame && !sourceGame.isBye) {
-        const sourcePick = picks[game.bottomSourceGameNumber];
-        if (sourcePick !== undefined) {
-          // Same logic for bottom
-        }
+      if (!sourceGame) {
+        errors.push(
+          `Game ${gameNum} has invalid bracket wiring: source game ${game.bottomSourceGameNumber} does not exist.`
+        );
+      } else if (!sourceGame.isBye && !Object.hasOwn(picks, game.bottomSourceGameNumber)) {
+        errors.push(
+          `Pick for game ${gameNum} requires a winner pick for game ${game.bottomSourceGameNumber} first.`
+        );
       }
     }
 
@@ -84,7 +88,7 @@ export function getPossibleTeams(
       // Bye: the team automatically advances
       const byeTeam = sourceGame.topTeamName || sourceGame.bottomTeamName;
       if (byeTeam) teams.push(byeTeam);
-    } else if (game.topSourceGameNumber in picks || picks[game.topSourceGameNumber]) {
+    } else if (Object.hasOwn(picks, game.topSourceGameNumber)) {
       teams.push(picks[game.topSourceGameNumber]);
     }
   } else if (game.topTeamName) {
@@ -97,7 +101,7 @@ export function getPossibleTeams(
     if (sourceGame?.isBye) {
       const byeTeam = sourceGame.topTeamName || sourceGame.bottomTeamName;
       if (byeTeam) teams.push(byeTeam);
-    } else if (picks[game.bottomSourceGameNumber]) {
+    } else if (Object.hasOwn(picks, game.bottomSourceGameNumber)) {
       teams.push(picks[game.bottomSourceGameNumber]);
     }
   } else if (game.bottomTeamName) {
@@ -128,36 +132,6 @@ export function getDownstreamGameNumbers(
 
   traverse(gameNumber);
   return downstream;
-}
-
-/**
- * Compute scores for all users in a tournament.
- */
-export function computeScores(
-  games: Game[],
-  picksByUser: Record<string, Pick[]>
-): Record<string, number> {
-  const scores: Record<string, number> = {};
-  const resultsMap = new Map<string, string>(); // gameId -> winnerTeamName
-
-  for (const game of games) {
-    if (game.winnerTeamName) {
-      resultsMap.set(game.id, game.winnerTeamName);
-    }
-  }
-
-  for (const [userId, picks] of Object.entries(picksByUser)) {
-    let score = 0;
-    for (const pick of picks) {
-      const winner = resultsMap.get(pick.gameId);
-      if (winner && pick.selectedTeam === winner) {
-        score += 1;
-      }
-    }
-    scores[userId] = score;
-  }
-
-  return scores;
 }
 
 /**

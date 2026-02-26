@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { calculateTournamentScores, calculateOverallScores, type UserScore } from "@/lib/scoring";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function StandingsPage() {
+  const session = await auth();
+  const currentUserId = session?.user?.id ?? null;
+
   const tournaments = await prisma.tournament.findMany({
     orderBy: [{ year: "desc" }, { conferenceName: "asc" }],
     include: {
@@ -33,7 +37,7 @@ export default async function StandingsPage() {
         {overallScores.length === 0 ? (
           <p className="text-slate-500">No picks yet.</p>
         ) : (
-          <LeaderboardTable scores={overallScores} />
+          <LeaderboardTable scores={overallScores} currentUserId={currentUserId} />
         )}
       </section>
 
@@ -56,7 +60,7 @@ export default async function StandingsPage() {
             {scores.length === 0 ? (
               <p className="text-slate-500 text-sm">No picks yet.</p>
             ) : (
-              <LeaderboardTable scores={scores.slice(0, 5)} compact />
+              <LeaderboardTable scores={scores.slice(0, 5)} compact currentUserId={currentUserId} />
             )}
           </section>
         );
@@ -65,7 +69,7 @@ export default async function StandingsPage() {
   );
 }
 
-function LeaderboardTable({ scores, compact }: { scores: UserScore[]; compact?: boolean }) {
+function LeaderboardTable({ scores, compact, currentUserId }: { scores: UserScore[]; compact?: boolean; currentUserId: string | null }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <table className="w-full text-sm">
@@ -84,7 +88,10 @@ function LeaderboardTable({ scores, compact }: { scores: UserScore[]; compact?: 
         </thead>
         <tbody>
           {scores.map((s, i) => (
-            <tr key={s.userId} className="border-b border-slate-100 last:border-0">
+            <tr
+              key={s.userId}
+              className={`border-b border-slate-100 last:border-0 ${s.userId === currentUserId ? "bg-blue-50" : ""}`}
+            >
               <td className="px-4 py-3 text-slate-500 font-mono">{i + 1}</td>
               <td className="px-4 py-3">
                 <Link

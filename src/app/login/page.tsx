@@ -2,33 +2,50 @@
 
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    // In dev, use credentials provider. In prod, use email magic link.
     try {
-      const result = await signIn("credentials", {
+      const credentialsResult = await signIn("credentials", {
         email,
         callbackUrl,
-        redirect: true,
+        redirect: false,
       });
-    } catch {
-      // Fallback to email provider
-      await signIn("email", { email, callbackUrl });
-      setSent(true);
-    }
 
-    setLoading(false);
+      if (credentialsResult?.ok && credentialsResult.url) {
+        router.push(credentialsResult.url);
+        router.refresh();
+        return;
+      }
+
+      const emailResult = await signIn("email", {
+        email,
+        callbackUrl,
+        redirect: false,
+      });
+      if (emailResult?.ok) {
+        setSent(true);
+      } else {
+        setError("Sign-in is currently unavailable. Please try again.");
+      }
+    } catch {
+      setError("Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (sent) {
@@ -71,11 +88,14 @@ function LoginForm() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-        <p className="mt-4 text-xs text-center text-slate-400">
-          Dev mode: any email will create/login instantly.
-          <br />
-          Use <strong>admin@example.com</strong> for admin access.
-        </p>
+        {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
+        {process.env.NODE_ENV !== "production" && (
+          <p className="mt-4 text-xs text-center text-slate-400">
+            Dev mode: any email will create/login instantly.
+            <br />
+            Use <strong>admin@example.com</strong> for admin access.
+          </p>
+        )}
       </div>
     </div>
   );

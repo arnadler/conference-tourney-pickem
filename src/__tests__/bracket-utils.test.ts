@@ -190,6 +190,39 @@ describe("validateBracketConsistency", () => {
     });
     expect(result.valid).toBe(false);
   });
+
+  it("requires source-game picks before downstream picks", () => {
+    const game1 = makeGame({
+      gameNumber: 1,
+      round: 1,
+      topTeamName: "Auburn",
+      bottomTeamName: "Vanderbilt",
+      nextGameNumber: 3,
+      nextSlot: "top",
+    });
+    const game2 = makeGame({
+      gameNumber: 2,
+      round: 1,
+      topTeamName: "Alabama",
+      bottomTeamName: "Florida",
+      nextGameNumber: 3,
+      nextSlot: "bottom",
+    });
+    const game3 = makeGame({
+      gameNumber: 3,
+      round: 2,
+      topSourceGameNumber: 1,
+      bottomSourceGameNumber: 2,
+    });
+
+    const result = validateBracketConsistency([game1, game2, game3], {
+      3: "Auburn",
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((error) => error.includes("requires a winner pick for game 1"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("requires a winner pick for game 2"))).toBe(true);
+  });
 });
 
 describe("getRoundNames", () => {

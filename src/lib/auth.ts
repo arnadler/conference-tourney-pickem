@@ -1,37 +1,60 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
+import EmailProvider from "next-auth/providers/email";
+import type { Provider } from "next-auth/providers";
 import { prisma } from "./db";
 
-const providers: any[] = [
-  CredentialsProvider({
-    name: "Dev Login",
-    credentials: {
-      email: { label: "Email", type: "email", placeholder: "admin@example.com" },
-    },
-    async authorize(credentials) {
-      const email = credentials?.email as string;
-      if (!email) return null;
+const isProduction = process.env.NODE_ENV === "production";
+const emailProviderConfigured = Boolean(process.env.EMAIL_SERVER_HOST);
 
-      let user = await prisma.user.findUnique({ where: { email } });
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email,
-            name: email.split("@")[0],
-            emailVerified: new Date(),
-          },
-        });
-      }
-      return { id: user.id, email: user.email, name: user.name };
-    },
-  }),
-];
+// Credentials login is kept for local/dev convenience and as an opt-in fallback.
+const credentialsEnabled =
+  !isProduction ||
+  !emailProviderConfigured ||
+  process.env.ENABLE_CREDENTIALS_LOGIN === "true";
 
-// Add email provider only if SMTP is configured
-if (process.env.EMAIL_SERVER_HOST) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const EmailProvider = require("next-auth/providers/email").default;
+const providers: Provider[] = [];
+
+if (credentialsEnabled) {
+  providers.push(
+    CredentialsProvider({
+      name: "Email Login",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "admin@example.com" },
+      },
+      async authorize(credentials) {
+        const rawEmail = credentials?.email;
+        const email =
+          typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : null;
+        if (!email) return null;
+
+        let user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email,
+              name: email.split("@")[0],
+              emailVerified: new Date(),
+            },
+          });
+        }
+
+        // Prevent privilege-claiming of admin accounts through passwordless credentials
+        // outside local development unless explicitly allowed.
+        const allowAdminCredentials =
+          !isProduction || process.env.ALLOW_ADMIN_CREDENTIALS_LOGIN === "true";
+        if (user.isAdmin && !allowAdminCredentials) {
+          return null;
+        }
+
+        return { id: user.id, email: user.email, name: user.name };
+      },
+    })
+  );
+}
+
+if (emailProviderConfigured) {
   providers.push(
     EmailProvider({
       server: {
@@ -47,8 +70,12 @@ if (process.env.EMAIL_SERVER_HOST) {
   );
 }
 
+if (providers.length === 0) {
+  throw new Error("No auth providers configured. Enable SMTP or credentials login.");
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma),
   providers,
   session: {
     strategy: "jwt",
@@ -61,8 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { id: token.sub },
           select: { isAdmin: true },
         });
-        (session.user as unknown as Record<string, unknown>).isAdmin =
-          dbUser?.isAdmin ?? false;
+        session.user.isAdmin = dbUser?.isAdmin ?? false;
       }
       return session;
     },

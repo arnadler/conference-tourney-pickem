@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Game } from "@/generated/prisma/client";
-import { getRoundNames } from "@/lib/bracket-utils";
+import { getRoundNames, getDownstreamGameNumbers } from "@/lib/bracket-utils";
 
 interface BracketProps {
   games: Game[];
@@ -20,20 +20,26 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
   const [invalidWarning, setInvalidWarning] = useState<string | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const gameMap = new Map<number, Game>();
-  for (const g of games) gameMap.set(g.gameNumber, g);
+  const gameMap = useMemo(() => {
+    const map = new Map<number, Game>();
+    for (const g of games) map.set(g.gameNumber, g);
+    return map;
+  }, [games]);
 
   const roundNames = getRoundNames(numRounds);
 
   // Group games by round
-  const rounds: Game[][] = [];
-  for (let r = 1; r <= numRounds; r++) {
-    rounds.push(
-      games
-        .filter((g) => g.round === r)
-        .sort((a, b) => a.position - b.position)
-    );
-  }
+  const rounds = useMemo(() => {
+    const result: Game[][] = [];
+    for (let r = 1; r <= numRounds; r++) {
+      result.push(
+        games
+          .filter((g) => g.round === r)
+          .sort((a, b) => a.position - b.position)
+      );
+    }
+    return result;
+  }, [games, numRounds]);
 
   // Get available teams for a game slot based on current picks
   const getTeams = useCallback(
@@ -72,16 +78,6 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
     [picks, results, gameMap]
   );
 
-  // Find all downstream games that depend on a given game
-  const getDownstream = (gameNumber: number): number[] => {
-    const downstream: number[] = [];
-    const game = gameMap.get(gameNumber);
-    if (!game?.nextGameNumber) return downstream;
-    downstream.push(game.nextGameNumber);
-    downstream.push(...getDownstream(game.nextGameNumber));
-    return downstream;
-  };
-
   const handlePick = (gameNumber: number, team: string) => {
     if (locked) return;
 
@@ -94,7 +90,7 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
       // If changing a pick, check for downstream invalidation
       const oldPick = prev[gameNumber];
       if (oldPick && oldPick !== team) {
-        const downstream = getDownstream(gameNumber);
+        const downstream = getDownstreamGameNumbers(gameNumber, games);
         let cleared = 0;
         for (const dg of downstream) {
           if (newPicks[dg] === oldPick) {

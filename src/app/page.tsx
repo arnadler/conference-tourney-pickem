@@ -17,9 +17,20 @@ export default async function HomePage() {
       <h1 className="text-3xl font-bold text-slate-900 mb-2">
         Conference Tournament Pick&apos;Em
       </h1>
-      <p className="text-slate-600 mb-8">
+      <p className="text-slate-600 mb-6">
         Pick winners in college basketball conference tournaments. Select a tournament below to start making picks.
       </p>
+
+      {/* Rules */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-8">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">How It Works</h2>
+        <div className="grid sm:grid-cols-2 gap-y-2 gap-x-8 text-sm text-slate-700">
+          <div><span className="font-semibold text-slate-900">Entry:</span> $5/tournament &mdash; all 5 required (SEC, ACC, Big Ten, Big East, Big 12)</div>
+          <div><span className="font-semibold text-slate-900">Payout:</span> Winner take all per tournament</div>
+          <div><span className="font-semibold text-slate-900">Scoring:</span> R1 = 1 pt &bull; R2 = 2 pts &bull; R3 = 3 pts &bull; R4 = 4 pts per correct pick</div>
+          <div><span className="font-semibold text-slate-900">Locks:</span> Picks lock at each tournament&apos;s first tip-off</div>
+        </div>
+      </div>
 
       {tournaments.length === 0 ? (
         <div className="text-center py-16 text-slate-500">

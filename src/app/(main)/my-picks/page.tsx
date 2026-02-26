@@ -41,10 +41,15 @@ export default async function MyPicksPage() {
         <div className="space-y-6">
           {tournaments.map((t) => {
             const picks = picksByTournament.get(t.id) || [];
+            const gameById = new Map(t.games.map((g) => [g.id, g]));
             const nonByeGames = t.games.filter((g) => !g.isBye).length;
             const correctPicks = picks.filter((p) => p.isCorrect === true).length;
             const incorrectPicks = picks.filter((p) => p.isCorrect === false).length;
             const pending = picks.filter((p) => p.isCorrect === null).length;
+            const score = picks.reduce((sum, p) => {
+              if (p.isCorrect !== true) return sum;
+              return sum + (gameById.get(p.gameId)?.round ?? 0);
+            }, 0);
 
             return (
               <div
@@ -69,7 +74,10 @@ export default async function MyPicksPage() {
                 </div>
 
                 {picks.length > 0 && (
-                  <div className="flex gap-4 mt-4 text-sm">
+                  <div className="flex gap-4 mt-4 text-sm items-center">
+                    <span className="text-slate-900 font-bold text-base">
+                      {score} pts
+                    </span>
                     <span className="text-green-600 font-medium">
                       {correctPicks} correct
                     </span>

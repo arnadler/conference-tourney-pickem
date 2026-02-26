@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { savePicksSchema } from "@/lib/validators";
-import { isTournamentLocked, getPossibleTeams, getDownstreamGameNumbers, buildGameMap } from "@/lib/bracket-utils";
+import {
+  isTournamentLocked,
+  validateBracketConsistency,
+  buildGameMap,
+} from "@/lib/bracket-utils";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -40,33 +44,29 @@ export async function POST(req: NextRequest) {
       picksMap[pick.gameNumber] = pick.selectedTeam;
     }
 
-    // Validate bracket consistency
-    for (const pick of parsed.picks) {
-      const game = gameMap.get(pick.gameNumber);
-      if (!game) {
-        return NextResponse.json(
-          { error: `Game ${pick.gameNumber} does not exist` },
-          { status: 400 }
-        );
-      }
-
-      if (game.isBye) continue;
-
-      // Check that selected team is a valid option for this game
-      const possible = getPossibleTeams(game, gameMap, picksMap);
-      if (possible.length > 0 && !possible.includes(pick.selectedTeam)) {
-        return NextResponse.json(
-          {
-            error: `Invalid pick for game ${pick.gameNumber}: ${pick.selectedTeam} is not available. Possible: ${possible.join(", ")}`,
-          },
-          { status: 400 }
-        );
-      }
+    // Validate bracket consistency and source-game dependencies.
+    const validation = validateBracketConsistency(tournament.games, picksMap);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.errors[0] }, { status: 400 });
     }
+
+    // Build picks data, filtering out byes
+    const picksToCreate = parsed.picks
+      .map((pick) => {
+        const game = gameMap.get(pick.gameNumber);
+        if (!game || game.isBye) return null;
+        return {
+          userId: session.user.id,
+          tournamentId: parsed.tournamentId,
+          gameId: game.id,
+          gameNumber: pick.gameNumber,
+          selectedTeam: pick.selectedTeam,
+        };
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
     // Save picks in transaction
     await prisma.$transaction(async (tx) => {
-      // Delete existing picks for this user/tournament
       await tx.pick.deleteMany({
         where: {
           userId: session.user.id,
@@ -74,20 +74,8 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create new picks
-      for (const pick of parsed.picks) {
-        const game = gameMap.get(pick.gameNumber);
-        if (!game || game.isBye) continue;
-
-        await tx.pick.create({
-          data: {
-            userId: session.user.id,
-            tournamentId: parsed.tournamentId,
-            gameId: game.id,
-            gameNumber: pick.gameNumber,
-            selectedTeam: pick.selectedTeam,
-          },
-        });
+      if (picksToCreate.length > 0) {
+        await tx.pick.createMany({ data: picksToCreate });
       }
     });
 

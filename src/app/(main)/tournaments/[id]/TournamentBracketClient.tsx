@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
+import type { Game } from "@/generated/prisma/client";
 import Bracket from "@/components/Bracket";
 
 interface GameData {
@@ -43,6 +44,16 @@ export default function TournamentBracketClient({
   tournamentId,
   loggedIn,
 }: Props) {
+  const bracketGames = useMemo<Game[]>(
+    () =>
+      games.map((game) => ({
+        ...game,
+        startTime: game.startTime ? new Date(game.startTime) : null,
+        resultEnteredAt: game.resultEnteredAt ? new Date(game.resultEnteredAt) : null,
+      })),
+    [games]
+  );
+
   const handleSave = useCallback(
     async (picks: Record<number, string>) => {
       if (!loggedIn) return;
@@ -66,10 +77,9 @@ export default function TournamentBracketClient({
     [tournamentId, loggedIn]
   );
 
-  // Cast games to the expected type (all fields match)
   return (
     <Bracket
-      games={games as any}
+      games={bracketGames}
       numRounds={numRounds}
       picks={initialPicks}
       results={results}

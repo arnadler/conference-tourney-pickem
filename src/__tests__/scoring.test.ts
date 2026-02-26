@@ -88,6 +88,25 @@ describe("calculateTournamentScores", () => {
     expect(scores[0].score).toBe(0);
   });
 
+  it("awards round-based points (R1=1pt, R2=2pt, etc.)", () => {
+    const games = [
+      makeGame({ id: "g1", gameNumber: 1, round: 1, winnerTeamName: "Auburn" }),
+      makeGame({ id: "g2", gameNumber: 2, round: 2, winnerTeamName: "Alabama" }),
+      makeGame({ id: "g3", gameNumber: 3, round: 3, winnerTeamName: "Florida" }),
+    ];
+
+    const picks = [
+      makePick({ userId: "user1", gameId: "g1", selectedTeam: "Auburn", gameNumber: 1 }),
+      makePick({ userId: "user1", gameId: "g2", selectedTeam: "Alabama", gameNumber: 2 }),
+      makePick({ userId: "user1", gameId: "g3", selectedTeam: "Florida", gameNumber: 3 }),
+    ];
+
+    const scores = calculateTournamentScores(games, picks);
+    expect(scores[0].score).toBe(6); // 1 + 2 + 3
+    expect(scores[0].correctPicks).toBe(3);
+    expect(scores[0].possiblePoints).toBe(6); // 1 + 2 + 3
+  });
+
   it("sorts users by score descending", () => {
     const games = [
       makeGame({ id: "g1", gameNumber: 1, winnerTeamName: "Auburn" }),

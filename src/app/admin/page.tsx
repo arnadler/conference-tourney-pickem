@@ -45,7 +45,6 @@ export default async function AdminPage() {
       ) : (
         <div className="space-y-4">
           {tournaments.map((t) => {
-            const totalNonByeGames = t._count.games - 0; // approximate (includes byes in count)
             const gamesWithResults = t.games.length;
             return (
               <div

@@ -1,5 +1,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
+import type { Game, User } from "@/generated/prisma/client";
+import { tournamentImportSchema } from "@/lib/validators";
 
 async function main() {
   // Dynamic import to work with Prisma 7's ESM generated client
@@ -27,7 +29,7 @@ async function main() {
   console.log(`  Admin user: ${admin.email}`);
 
   // Create test users
-  const users: any[] = [];
+  const users: User[] = [];
   const testEmails = [
     "alice@example.com",
     "bob@example.com",
@@ -51,12 +53,12 @@ async function main() {
   }
 
   // Import sample tournaments
-  const sampleFiles = ["sec-2026.json", "big-east-2026.json"];
+  const sampleFiles = ["big-ten-2026.json", "acc-2026.json", "big-12-2026.json", "sec-2026.json", "big-east-2026.json"];
   const sampleDir = join(process.cwd(), "prisma", "sample-data");
 
   for (const file of sampleFiles) {
     const filePath = join(sampleDir, file);
-    const data = JSON.parse(readFileSync(filePath, "utf-8"));
+    const data = tournamentImportSchema.parse(JSON.parse(readFileSync(filePath, "utf-8")));
 
     // Delete existing tournament if it exists
     const existing = await prisma.tournament.findUnique({
@@ -73,7 +75,7 @@ async function main() {
       await prisma.tournament.delete({ where: { id: existing.id } });
     }
 
-    const numRounds = Math.max(...data.games.map((g: any) => g.round));
+    const numRounds = Math.max(...data.games.map((g) => g.round));
     const tournament = await prisma.tournament.create({
       data: {
         conferenceName: data.conferenceName,
@@ -115,14 +117,13 @@ async function main() {
       orderBy: { round: "asc" },
     });
 
-    const gameMap = new Map(games.map((g: any) => [g.gameNumber, g]));
+    const gameMap = new Map<number, Game>(games.map((g) => [g.gameNumber, g]));
 
     for (const user of users) {
       const userPicks: Record<number, string> = {};
-      const sortedGames = [...games].sort((a: any, b: any) => a.round - b.round || a.position - b.position);
+      const sortedGames = [...games].sort((a, b) => a.round - b.round || a.position - b.position);
 
-      for (const game of sortedGames) {
-        const g = game as any;
+      for (const g of sortedGames) {
         if (g.isBye) {
           const byeTeam = g.topTeamName || g.bottomTeamName;
           if (byeTeam) userPicks[g.gameNumber] = byeTeam;
@@ -132,8 +133,8 @@ async function main() {
         let topTeam = g.topTeamName;
         let bottomTeam = g.bottomTeamName;
 
-        if (g.topSourceGameNumber) {
-          const sourceGame = gameMap.get(g.topSourceGameNumber) as any;
+        if (g.topSourceGameNumber != null) {
+          const sourceGame = gameMap.get(g.topSourceGameNumber);
           if (sourceGame?.isBye) {
             topTeam = sourceGame.topTeamName || sourceGame.bottomTeamName;
           } else if (userPicks[g.topSourceGameNumber]) {
@@ -141,8 +142,8 @@ async function main() {
           }
         }
 
-        if (g.bottomSourceGameNumber) {
-          const sourceGame = gameMap.get(g.bottomSourceGameNumber) as any;
+        if (g.bottomSourceGameNumber != null) {
+          const sourceGame = gameMap.get(g.bottomSourceGameNumber);
           if (sourceGame?.isBye) {
             bottomTeam = sourceGame.topTeamName || sourceGame.bottomTeamName;
           } else if (userPicks[g.bottomSourceGameNumber]) {
@@ -159,8 +160,7 @@ async function main() {
         }
       }
 
-      for (const game of sortedGames) {
-        const g = game as any;
+      for (const g of sortedGames) {
         if (g.isBye) continue;
         const selectedTeam = userPicks[g.gameNumber];
         if (!selectedTeam) continue;
