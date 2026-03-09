@@ -15,8 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Conference Tournament Pick'Em",
-  description: "Pick winners in college basketball conference tournaments",
+  title: "Conference Tourney Pick'Em",
+  description: "Pick winners in college basketball conference tournaments. Climb the standings. Brag to your friends.",
+  openGraph: {
+    title: "Conference Tourney Pick'Em",
+    description: "Pick winners in college basketball conference tournaments. Climb the standings. Brag to your friends.",
+    url: "https://conftourneypickem.com",
+    siteName: "Conference Tourney Pick'Em",
+    images: [{ url: "https://conftourneypickem.com/og", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Conference Tourney Pick'Em",
+    description: "Pick winners in college basketball conference tournaments.",
+    images: ["https://conftourneypickem.com/og"],
+  },
 };
 
 export default function RootLayout({
