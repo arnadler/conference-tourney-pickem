@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Conference Tourney Pick'Em",
-  description: "Pick winners in college basketball conference tournaments. Climb the standings. Brag to your friends.",
+  description: "You trying to get the pipe?",
   openGraph: {
     title: "Conference Tourney Pick'Em",
-    description: "Pick winners in college basketball conference tournaments. Climb the standings. Brag to your friends.",
+    description: "You trying to get the pipe?",
     url: "https://conftourneypickem.com",
     siteName: "Conference Tourney Pick'Em",
     images: [{ url: "https://conftourneypickem.com/og", width: 1200, height: 630 }],

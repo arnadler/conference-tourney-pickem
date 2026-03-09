@@ -63,7 +63,7 @@ export function GET() {
             display: "flex",
           }}
         >
-          Pick winners. Climb the standings. Brag to your friends.
+          You trying to get the pipe?
         </div>
 
         {/* URL pill */}
