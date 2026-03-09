@@ -123,7 +123,7 @@ export default function AdminResultsClient({
                             : "bg-slate-50 text-slate-400 cursor-not-allowed"
                         }`}
                       >
-                        {game.topSeedLabel || topTeam || "TBD"}
+                        {topTeam || game.topSeedLabel || "TBD"}
                       </button>
                       <button
                         onClick={() => bottomTeam && enterResult(game.gameNumber, bottomTeam)}
@@ -136,7 +136,7 @@ export default function AdminResultsClient({
                             : "bg-slate-50 text-slate-400 cursor-not-allowed"
                         }`}
                       >
-                        {game.bottomSeedLabel || bottomTeam || "TBD"}
+                        {bottomTeam || game.bottomSeedLabel || "TBD"}
                       </button>
                     </div>
 

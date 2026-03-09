@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import DeleteTournamentButton from "./DeleteTournamentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export default async function AdminPage() {
                   >
                     Manage / Enter Results
                   </Link>
-                  <DeleteTournamentButton tournamentId={t.id} name={`${t.conferenceName} ${t.year}`} />
+                  <DeleteTournamentButton tournamentId={t.id} name={`${t.conferenceName} ${t.year}`}/>
                 </div>
               </div>
             );
@@ -78,40 +79,5 @@ export default async function AdminPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function DeleteTournamentButton({ tournamentId, name }: { tournamentId: string; name: string }) {
-  return (
-    <form
-      action={async () => {
-        "use server";
-        const session = await auth();
-        if (!session?.user?.id) return;
-        const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-        if (!user?.isAdmin) return;
-
-        await prisma.$transaction(async (tx) => {
-          await tx.pick.deleteMany({ where: { tournamentId } });
-          await tx.game.deleteMany({ where: { tournamentId } });
-          await tx.tournament.delete({ where: { id: tournamentId } });
-        });
-
-        const { redirect } = await import("next/navigation");
-        redirect("/admin");
-      }}
-    >
-      <button
-        type="submit"
-        className="px-3 py-1.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors"
-        onClick={(e) => {
-          if (!confirm(`Delete ${name}? This will remove all picks too.`)) {
-            e.preventDefault();
-          }
-        }}
-      >
-        Delete
-      </button>
-    </form>
   );
 }
