@@ -56,7 +56,7 @@ export default async function TournamentStandingsPage({
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Score</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Correct</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Total Picks</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">Possible</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">Pts Remaining</th>
               </tr>
             </thead>
             <tbody>

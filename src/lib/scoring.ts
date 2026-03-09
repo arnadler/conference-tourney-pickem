@@ -20,7 +20,19 @@ export function calculateTournamentScores(
 ): UserScore[] {
   const userMap = new Map<string, UserScore>();
   const gameById = new Map(games.map((g) => [g.id, g]));
-  const possiblePoints = games.filter((g) => !g.isBye).reduce((sum, g) => sum + g.round, 0);
+
+  // Build set of teams that have already been eliminated (lost a decided game)
+  const eliminatedTeams = new Set<string>();
+  for (const game of games) {
+    if (game.winnerTeamName && !game.isBye) {
+      if (game.topTeamName && game.topTeamName !== game.winnerTeamName) {
+        eliminatedTeams.add(game.topTeamName);
+      }
+      if (game.bottomTeamName && game.bottomTeamName !== game.winnerTeamName) {
+        eliminatedTeams.add(game.bottomTeamName);
+      }
+    }
+  }
 
   for (const pick of allPicks) {
     if (!userMap.has(pick.userId)) {
@@ -31,7 +43,7 @@ export function calculateTournamentScores(
         score: 0,
         totalPicks: 0,
         correctPicks: 0,
-        possiblePoints,
+        possiblePoints: 0,
       });
     }
 
@@ -39,10 +51,18 @@ export function calculateTournamentScores(
     entry.totalPicks++;
 
     const game = gameById.get(pick.gameId);
-    if (game?.winnerTeamName) {
+    if (!game || game.isBye) continue;
+
+    if (game.winnerTeamName) {
+      // Decided game
       if (pick.selectedTeam === game.winnerTeamName) {
-        entry.score += game.round; // points = round number (R1=1, R2=2, R3=3, R4=4)
+        entry.score += game.round;
         entry.correctPicks++;
+      }
+    } else {
+      // Undecided game — only counts as possible if the picked team is still alive
+      if (!eliminatedTeams.has(pick.selectedTeam)) {
+        entry.possiblePoints += game.round;
       }
     }
   }
