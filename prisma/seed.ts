@@ -4,13 +4,10 @@ import type { Game, User } from "@/generated/prisma/client";
 import { tournamentImportSchema } from "@/lib/validators";
 
 async function main() {
-  // Dynamic import to work with Prisma 7's ESM generated client
   const { PrismaClient } = await import("@/generated/prisma/client.js");
-  const { PrismaBetterSqlite3 } = await import("@prisma/adapter-better-sqlite3");
-  const path = await import("path");
+  const { PrismaNeon } = await import("@prisma/adapter-neon");
 
-  const dbPath = path.join(process.cwd(), "dev.db");
-  const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
+  const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
   console.log("Seeding database...");
