@@ -25,12 +25,18 @@ function LoginForm() {
         redirect: false,
       });
 
-      if (credentialsResult?.ok && credentialsResult.url) {
-        router.push(credentialsResult.url);
+      if (credentialsResult?.ok) {
+        router.push(credentialsResult.url ?? callbackUrl);
         router.refresh();
         return;
       }
 
+      if (credentialsResult?.error) {
+        setError("Sign-in failed. Check your email and try again.");
+        return;
+      }
+
+      // Fallback: try magic link email if credentials provider unavailable
       const emailResult = await signIn("email", {
         email,
         callbackUrl,
