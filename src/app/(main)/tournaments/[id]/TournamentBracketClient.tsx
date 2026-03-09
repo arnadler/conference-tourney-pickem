@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Game } from "@/generated/prisma/client";
 import Bracket from "@/components/Bracket";
 
@@ -44,6 +45,15 @@ export default function TournamentBracketClient({
   tournamentId,
   loggedIn,
 }: Props) {
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    // Picks are already auto-saved; just navigate back to my-picks
+    router.push("/my-picks");
+  }
+
   const bracketGames = useMemo<Game[]>(
     () =>
       games.map((game) => ({
@@ -78,13 +88,26 @@ export default function TournamentBracketClient({
   );
 
   return (
-    <Bracket
-      games={bracketGames}
-      numRounds={numRounds}
-      picks={initialPicks}
-      results={results}
-      locked={locked || !loggedIn}
-      onSave={handleSave}
-    />
+    <div>
+      <Bracket
+        games={bracketGames}
+        numRounds={numRounds}
+        picks={initialPicks}
+        results={results}
+        locked={locked || !loggedIn}
+        onSave={handleSave}
+      />
+      {loggedIn && !locked && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          >
+            {submitting ? "Submitting..." : "Submit Picks"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
