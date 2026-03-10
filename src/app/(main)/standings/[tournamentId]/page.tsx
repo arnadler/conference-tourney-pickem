@@ -56,7 +56,7 @@ export default async function TournamentStandingsPage({
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Score</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Correct</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Total Picks</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">Pts Remaining</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">Max Points</th>
               </tr>
             </thead>
             <tbody>
@@ -77,7 +77,7 @@ export default async function TournamentStandingsPage({
                   <td className="px-4 py-3 text-right font-bold text-slate-900">{s.score}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{s.correctPicks}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{s.totalPicks}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{s.possiblePoints}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{s.maxPoints}</td>
                 </tr>
               ))}
             </tbody>

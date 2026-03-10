@@ -7,7 +7,7 @@ export interface UserScore {
   score: number;
   totalPicks: number;
   correctPicks: number;
-  possiblePoints: number;
+  maxPoints: number;
 }
 
 /**
@@ -43,7 +43,7 @@ export function calculateTournamentScores(
         score: 0,
         totalPicks: 0,
         correctPicks: 0,
-        possiblePoints: 0,
+        maxPoints: 0,
       });
     }
 
@@ -60,11 +60,16 @@ export function calculateTournamentScores(
         entry.correctPicks++;
       }
     } else {
-      // Undecided game — only counts as possible if the picked team is still alive
+      // Undecided game — only counts toward max if the picked team is still alive
       if (!eliminatedTeams.has(pick.selectedTeam)) {
-        entry.possiblePoints += game.round;
+        entry.maxPoints += game.round;
       }
     }
+  }
+
+  // maxPoints = current score + points still possible from undecided games
+  for (const entry of userMap.values()) {
+    entry.maxPoints += entry.score;
   }
 
   return Array.from(userMap.values()).sort((a, b) => b.score - a.score);
@@ -85,7 +90,7 @@ export function calculateOverallScores(
         existing.score += score.score;
         existing.totalPicks += score.totalPicks;
         existing.correctPicks += score.correctPicks;
-        existing.possiblePoints += score.possiblePoints;
+        existing.maxPoints += score.maxPoints;
       } else {
         overallMap.set(score.userId, { ...score });
       }
