@@ -11,14 +11,22 @@ interface BracketProps {
   results: Record<number, string>; // gameNumber -> winnerTeamName
   locked: boolean;
   onSave: (picks: Record<number, string>) => Promise<void>;
+  onSubmit?: () => void;
 }
 
-export default function Bracket({ games, numRounds, picks: initialPicks, results, locked, onSave }: BracketProps) {
+export default function Bracket({ games, numRounds, picks: initialPicks, results, locked, onSave, onSubmit }: BracketProps) {
   const [picks, setPicks] = useState<Record<number, string>>(initialPicks);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [invalidWarning, setInvalidWarning] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const saveTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const picksRef = useRef(picks);
+
+  // Keep ref in sync so handleSubmit can read latest picks without stale closure
+  useEffect(() => {
+    picksRef.current = picks;
+  }, [picks]);
 
   const gameMap = useMemo(() => {
     const map = new Map<number, Game>();
@@ -111,6 +119,22 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
     });
   };
 
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    // Cancel pending debounced save and flush immediately
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    try {
+      await onSave(picksRef.current);
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+    onSubmit?.();
+  };
+
   // Debounced auto-save
   useEffect(() => {
     if (locked) return;
@@ -149,6 +173,19 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
               {invalidWarning}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Submit button */}
+      {onSubmit && !locked && (
+        <div className="flex justify-center mt-2 mb-2">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          >
+            {submitting ? "Submitting..." : "Submit Picks"}
+          </button>
         </div>
       )}
 
