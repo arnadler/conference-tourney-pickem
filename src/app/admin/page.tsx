@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import DeleteTournamentButton from "./DeleteTournamentButton";
+import SendEmailButton from "./SendEmailButton";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,15 @@ export default async function AdminPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-        <Link
-          href="/admin/import"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
-        >
-          Import Tournament
-        </Link>
+        <div className="flex items-center gap-3">
+          <SendEmailButton />
+          <Link
+            href="/admin/import"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
+          >
+            Import Tournament
+          </Link>
+        </div>
       </div>
 
       {tournaments.length === 0 ? (
