@@ -9,12 +9,14 @@ export default function SendEmailButton() {
   const [preview, setPreview] = useState<string | null>(null);
 
   async function handleClick() {
-    if (!confirm("Send a Day 2 recap email to all players?")) return;
+    const day = prompt("Which day is this recap for? (e.g. 3)");
+    if (!day) return;
+    if (!confirm(`Send a Day ${day} recap email to all players?`)) return;
     setStatus("loading");
     setMessage(null);
     setPreview(null);
 
-    const result = await sendStandingsEmail();
+    const result = await sendStandingsEmail(Number(day));
     if (result.success) {
       setStatus("success");
       setMessage(`Sent to ${result.sent} player${result.sent === 1 ? "" : "s"}.`);
@@ -32,7 +34,7 @@ export default function SendEmailButton() {
         disabled={status === "loading"}
         className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-400 disabled:opacity-50 transition-colors"
       >
-        {status === "loading" ? "Generating & sending..." : "📧 Send Day 2 Recap Email"}
+        {status === "loading" ? "Generating & sending..." : "📧 Send Standings Recap Email"}
       </button>
       {status === "success" && message && (
         <p className="text-sm text-green-600 font-medium">{message}</p>

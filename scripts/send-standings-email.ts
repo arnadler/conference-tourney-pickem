@@ -1,18 +1,32 @@
-"use server";
+/**
+ * Run with: npx tsx scripts/send-standings-email.ts
+ * Requires .env.local with DATABASE_URL, RESEND_API_KEY, ANTHROPIC_API_KEY
+ */
 
-import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { calculateTournamentScores, calculateOverallScores } from "@/lib/scoring";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env.local
+config({ path: resolve(process.cwd(), ".env.local") });
+
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { calculateTournamentScores, calculateOverallScores } from "../src/lib/scoring";
 import Anthropic from "@anthropic-ai/sdk";
 
-export async function sendStandingsEmail(day: number): Promise<{ success: boolean; error?: string; sent?: number; preview?: string }> {
-  const session = await auth();
-  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user?.isAdmin) return { success: false, error: "Not authorized" };
+async function main() {
+  const day = process.argv[2] ? Number(process.argv[2]) : null;
+  if (!day) {
+    console.error("Usage: npx tsx scripts/send-standings-email.ts <day>");
+    console.error("Example: npx tsx scripts/send-standings-email.ts 3");
+    process.exit(1);
+  }
 
-  // Fetch all tournaments with picks
+  console.log(`Fetching standings for Day ${day} recap...`);
+
   const tournaments = await prisma.tournament.findMany({
     orderBy: [{ year: "desc" }, { conferenceName: "asc" }],
     include: {
@@ -28,15 +42,15 @@ export async function sendStandingsEmail(day: number): Promise<{ success: boolea
   const overallScores = calculateOverallScores(tournamentScoresMap);
 
   if (overallScores.length === 0) {
-    return { success: false, error: "No picks yet — nobody to email." };
+    console.error("No picks yet — nobody to email.");
+    process.exit(1);
   }
 
-  // Build standings summary for Claude
+  // Build standings summary
   let standingsSummary = "OVERALL STANDINGS:\n";
   for (const [i, s] of overallScores.entries()) {
     standingsSummary += `${i + 1}. ${s.userName || s.userEmail} — Score: ${s.score} pts, Max Possible: ${s.maxPoints} pts\n`;
   }
-
   for (const t of tournaments) {
     const scores = tournamentScoresMap.get(t.id) ?? [];
     if (scores.length === 0) continue;
@@ -48,7 +62,10 @@ export async function sendStandingsEmail(day: number): Promise<{ success: boolea
     }
   }
 
+  console.log("\nCurrent standings:\n" + standingsSummary);
+
   // Generate email with Claude
+  console.log("Generating email with Claude...");
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const response = await anthropic.messages.create({
@@ -70,8 +87,8 @@ ${standingsSummary}`,
   });
 
   const emailText = (response.content[0] as { type: string; text: string }).text;
+  console.log("\n--- EMAIL PREVIEW ---\n" + emailText + "\n--- END PREVIEW ---\n");
 
-  // Convert line breaks to HTML
   const emailHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
       <div style="font-size: 28px; margin-bottom: 16px;">🏀 Day ${day} Recap</div>
@@ -83,16 +100,14 @@ ${standingsSummary}`,
     </div>
   `;
 
-  // Get all users who have made picks
+  // Get all player emails
   const players = await prisma.user.findMany({
     where: { picks: { some: {} }, email: { not: null } },
-    select: { email: true },
+    select: { email: true, name: true },
   });
-
   const emails = players.map((p) => p.email).filter(Boolean) as string[];
-  if (emails.length === 0) return { success: false, error: "No player emails found." };
+  console.log(`Sending to ${emails.length} players: ${emails.join(", ")}`);
 
-  // Send via Resend
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -103,14 +118,19 @@ ${standingsSummary}`,
       from: "Pick'Em Commissioner <noreply@conftourneypickem.com>",
       to: emails,
       subject: `🏀 Day ${day} Pick'Em Standings — Who's cooked?`,
-    html: emailHtml,
+      html: emailHtml,
     }),
   });
 
   if (!res.ok) {
     const err = await res.json();
-    return { success: false, error: JSON.stringify(err) };
+    console.error("Resend error:", err);
+    process.exit(1);
   }
 
-  return { success: true, sent: emails.length, preview: emailText };
+  console.log(`✓ Email sent to ${emails.length} players!`);
 }
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());
