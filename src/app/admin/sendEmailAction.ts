@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { calculateTournamentScores, calculateOverallScores } from "@/lib/scoring";
+import { buildStandingsSummary } from "@/lib/standings-summary";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function sendStandingsEmail(day: number): Promise<{ success: boolean; error?: string; sent?: number; preview?: string }> {
@@ -31,22 +32,7 @@ export async function sendStandingsEmail(day: number): Promise<{ success: boolea
     return { success: false, error: "No picks yet — nobody to email." };
   }
 
-  // Build standings summary for Claude
-  let standingsSummary = "OVERALL STANDINGS:\n";
-  for (const [i, s] of overallScores.entries()) {
-    standingsSummary += `${i + 1}. ${s.userName || s.userEmail} — Score: ${s.score} pts, Max Possible: ${s.maxPoints} pts\n`;
-  }
-
-  for (const t of tournaments) {
-    const scores = tournamentScoresMap.get(t.id) ?? [];
-    if (scores.length === 0) continue;
-    const gamesDecided = t.games.filter((g) => g.winnerTeamName && !g.isBye).length;
-    const totalGames = t.games.filter((g) => !g.isBye).length;
-    standingsSummary += `\n${t.conferenceName} ${t.year} (${gamesDecided}/${totalGames} games played):\n`;
-    for (const [i, s] of scores.entries()) {
-      standingsSummary += `${i + 1}. ${s.userName || s.userEmail} — Score: ${s.score} pts, Max Possible: ${s.maxPoints} pts\n`;
-    }
-  }
+  const standingsSummary = buildStandingsSummary(tournaments, tournamentScoresMap, overallScores);
 
   // Generate email with Claude
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -59,11 +45,15 @@ export async function sendStandingsEmail(day: number): Promise<{ success: boolea
         role: "user",
         content: `You're writing a cheeky, trash-talky end-of-day recap email for a college basketball conference tournament pick'em competition between friends. Day ${day} just wrapped up.
 
-Write a funny, slightly savage but friendly email to all participants. Roast whoever is in last, hype up the leader, note any close battles, comment on the "Max Points" ceiling (someone with a low max is basically mathematically cooked), and bring the energy. Sign it "— The Commissioner 🏀".
+Write a funny, slightly savage but friendly email to all participants. Include:
+- Hype up the leader, roast anyone in last place
+- Call out players marked "DRAWING DEAD" — their Max Possible is already below the leader's current score, meaning they literally cannot win. Be ruthless but funny about it.
+- For players still alive, use the "Remaining games and picks" data to call out specific "needs" — e.g. "Alex needs Virginia to beat Miami or he's cooked." Look for games where two players picked different teams and one needs their pick to win to stay in contention.
+- Keep the overall energy fun and trash-talky
 
-Keep it under 300 words. Write it as plain text with line breaks — no HTML tags.
+Sign it "— The Commissioner 🏀". Under 400 words. Plain text with line breaks only — no HTML.
 
-Current standings:
+Data:
 ${standingsSummary}`,
       },
     ],
