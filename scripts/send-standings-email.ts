@@ -5,7 +5,6 @@
 
 import { config } from "dotenv";
 import { resolve } from "path";
-import { spawnSync } from "child_process";
 
 // Load .env.local
 config({ path: resolve(process.cwd(), ".env.local") });
@@ -120,28 +119,6 @@ ${standingsSummary}`,
   }
 
   console.log(`✓ Email sent to ${emails.length} players!`);
-
-  // Send to iMessage group chat "Pipe"
-  console.log('Sending to iMessage group chat "Pipe"...');
-  sendIMessage("Pipe", `🏀 Day ${day} Pick'Em Recap\n\n${emailText}\n\nFull standings: conftourneypickem.com/standings`);
-  console.log("✓ iMessage sent!");
-}
-
-function sendIMessage(chatName: string, message: string) {
-  // Build AppleScript — newlines must be `& return &` since AS strings can't contain literal newlines
-  const asText = message
-    .split("\n")
-    .map((l) => `"${l.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
-    .join(" & return & ");
-
-  const script = `tell application "Messages"
-  set targetChat to first chat whose name is "${chatName}"
-  send ${asText} to targetChat
-end tell`;
-
-  // Pass via stdin to avoid any shell escaping issues
-  const result = spawnSync("osascript", ["-"], { input: script, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`AppleScript error: ${result.stderr}`);
 }
 
 main()
