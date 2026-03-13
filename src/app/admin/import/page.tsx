@@ -7,21 +7,177 @@ const SAMPLE_JSON = `{
   "conferenceName": "ACC",
   "year": 2026,
   "timezone": "America/New_York",
-  "firstGameStart": "2026-03-10T12:00:00-05:00",
+  "firstGameStart": "2026-03-10T14:00:00-04:00",
   "teams": [
     { "seed": 1, "name": "Duke" },
-    { "seed": 2, "name": "North Carolina" }
+    { "seed": 2, "name": "Virginia" },
+    { "seed": 3, "name": "Miami" },
+    { "seed": 4, "name": "North Carolina" },
+    { "seed": 5, "name": "Clemson" },
+    { "seed": 6, "name": "Louisville" },
+    { "seed": 7, "name": "NC State" },
+    { "seed": 8, "name": "Florida State" },
+    { "seed": 9, "name": "California" },
+    { "seed": 10, "name": "Stanford" },
+    { "seed": 11, "name": "SMU" },
+    { "seed": 12, "name": "Virginia Tech" },
+    { "seed": 13, "name": "Wake Forest" },
+    { "seed": 14, "name": "Syracuse" },
+    { "seed": 15, "name": "Pitt" }
   ],
   "games": [
     {
       "gameNumber": 1,
       "round": 1,
       "position": 0,
-      "startTime": "2026-03-10T12:00:00-05:00",
+      "startTime": "2026-03-10T14:00:00-04:00",
+      "topTeamName": "Stanford",
+      "bottomTeamName": "Pitt",
+      "topSeedLabel": "#10 Stanford",
+      "bottomSeedLabel": "#15 Pitt",
+      "nextGameNumber": 4,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 2,
+      "round": 1,
+      "position": 1,
+      "startTime": "2026-03-10T16:30:00-04:00",
+      "topTeamName": "SMU",
+      "bottomTeamName": "Syracuse",
+      "topSeedLabel": "#11 SMU",
+      "bottomSeedLabel": "#14 Syracuse",
+      "nextGameNumber": 5,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 3,
+      "round": 1,
+      "position": 2,
+      "startTime": "2026-03-10T19:00:00-04:00",
+      "topTeamName": "Virginia Tech",
+      "bottomTeamName": "Wake Forest",
+      "topSeedLabel": "#12 Virginia Tech",
+      "bottomSeedLabel": "#13 Wake Forest",
+      "nextGameNumber": 7,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 4,
+      "round": 2,
+      "position": 0,
+      "startTime": "2026-03-11T12:00:00-04:00",
+      "topTeamName": "NC State",
+      "topSeedLabel": "#7 NC State",
+      "bottomSourceGameNumber": 1,
+      "nextGameNumber": 8,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 5,
+      "round": 2,
+      "position": 1,
+      "startTime": "2026-03-11T14:30:00-04:00",
+      "topTeamName": "Louisville",
+      "topSeedLabel": "#6 Louisville",
+      "bottomSourceGameNumber": 2,
+      "nextGameNumber": 9,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 6,
+      "round": 2,
+      "position": 2,
+      "startTime": "2026-03-11T19:00:00-04:00",
+      "topTeamName": "Florida State",
+      "bottomTeamName": "California",
+      "topSeedLabel": "#8 Florida State",
+      "bottomSeedLabel": "#9 California",
+      "nextGameNumber": 10,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 7,
+      "round": 2,
+      "position": 3,
+      "startTime": "2026-03-11T21:30:00-04:00",
+      "topTeamName": "Clemson",
+      "topSeedLabel": "#5 Clemson",
+      "bottomSourceGameNumber": 3,
+      "nextGameNumber": 11,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 8,
+      "round": 3,
+      "position": 0,
+      "startTime": "2026-03-12T12:00:00-04:00",
+      "topTeamName": "Virginia",
+      "topSeedLabel": "#2 Virginia",
+      "bottomSourceGameNumber": 4,
+      "nextGameNumber": 12,
+      "nextSlot": "top"
+    },
+    {
+      "gameNumber": 9,
+      "round": 3,
+      "position": 1,
+      "startTime": "2026-03-12T14:30:00-04:00",
+      "topTeamName": "Miami",
+      "topSeedLabel": "#3 Miami",
+      "bottomSourceGameNumber": 5,
+      "nextGameNumber": 12,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 10,
+      "round": 3,
+      "position": 2,
+      "startTime": "2026-03-12T19:00:00-04:00",
       "topTeamName": "Duke",
-      "bottomTeamName": "North Carolina",
       "topSeedLabel": "#1 Duke",
-      "bottomSeedLabel": "#2 North Carolina"
+      "bottomSourceGameNumber": 6,
+      "nextGameNumber": 13,
+      "nextSlot": "top"
+    },
+    {
+      "gameNumber": 11,
+      "round": 3,
+      "position": 3,
+      "startTime": "2026-03-12T21:30:00-04:00",
+      "topTeamName": "North Carolina",
+      "topSeedLabel": "#4 North Carolina",
+      "bottomSourceGameNumber": 7,
+      "nextGameNumber": 13,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 12,
+      "round": 4,
+      "position": 0,
+      "startTime": "2026-03-13T19:00:00-04:00",
+      "topSourceGameNumber": 8,
+      "bottomSourceGameNumber": 9,
+      "nextGameNumber": 14,
+      "nextSlot": "top"
+    },
+    {
+      "gameNumber": 13,
+      "round": 4,
+      "position": 1,
+      "startTime": "2026-03-13T21:30:00-04:00",
+      "topSourceGameNumber": 10,
+      "bottomSourceGameNumber": 11,
+      "nextGameNumber": 14,
+      "nextSlot": "bottom"
+    },
+    {
+      "gameNumber": 14,
+      "round": 5,
+      "position": 0,
+      "startTime": "2026-03-14T20:30:00-04:00",
+      "topSourceGameNumber": 12,
+      "bottomSourceGameNumber": 13
     }
   ]
 }`;
