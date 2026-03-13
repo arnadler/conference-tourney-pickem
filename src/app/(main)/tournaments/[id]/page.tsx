@@ -42,6 +42,23 @@ export default async function TournamentPage({ params }: { params: Promise<{ id:
     }
   }
 
+  // Fetch aggregate pick counts (only after lock so pre-lock picks stay private)
+  const pickCounts: Record<number, Record<string, number>> = {};
+  let totalPlayers = 0;
+  if (locked) {
+    const allPicks = await prisma.pick.findMany({
+      where: { tournamentId: id },
+      select: { gameNumber: true, selectedTeam: true, userId: true },
+    });
+    const uniqueUsers = new Set<string>();
+    for (const p of allPicks) {
+      uniqueUsers.add(p.userId);
+      pickCounts[p.gameNumber] ??= {};
+      pickCounts[p.gameNumber][p.selectedTeam] = (pickCounts[p.gameNumber][p.selectedTeam] ?? 0) + 1;
+    }
+    totalPlayers = uniqueUsers.size;
+  }
+
   // Serialize games for client
   const gamesData = tournament.games.map((g) => ({
     id: g.id,
@@ -106,6 +123,8 @@ export default async function TournamentPage({ params }: { params: Promise<{ id:
         locked={locked}
         tournamentId={tournament.id}
         loggedIn={!!session?.user?.id}
+        pickCounts={pickCounts}
+        totalPlayers={totalPlayers}
       />
     </div>
   );

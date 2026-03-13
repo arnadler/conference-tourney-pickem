@@ -4,6 +4,13 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Game } from "@/generated/prisma/client";
 import { getRoundNames, getDownstreamGameNumbers } from "@/lib/bracket-utils";
 
+// Vertical px allocated per Round-1 game slot. Controls overall bracket height.
+const SLOT_HEIGHT = 108;
+// Approximate game card height (header + 2 team buttons). Used for centering.
+const GAME_CARD_HEIGHT = 90;
+// Must match the gap-6 class (24px) used on the flex container.
+const COL_GAP = 24;
+
 interface BracketProps {
   games: Game[];
   numRounds: number;
@@ -12,9 +19,11 @@ interface BracketProps {
   locked: boolean;
   onSave: (picks: Record<number, string>) => Promise<void>;
   onSubmit?: () => void;
+  pickCounts?: Record<number, Record<string, number>>;
+  totalPlayers?: number;
 }
 
-export default function Bracket({ games, numRounds, picks: initialPicks, results, locked, onSave, onSubmit }: BracketProps) {
+export default function Bracket({ games, numRounds, picks: initialPicks, results, locked, onSave, onSubmit, pickCounts, totalPlayers }: BracketProps) {
   const [picks, setPicks] = useState<Record<number, string>>(initialPicks);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -160,6 +169,9 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
     };
   }, [picks, locked, onSave, initialPicks]);
 
+  const round1Count = rounds[0]?.length ?? 1;
+  const totalHeight = round1Count * SLOT_HEIGHT;
+
   return (
     <div className="space-y-4">
       {/* Save status bar */}
@@ -192,79 +204,151 @@ export default function Bracket({ games, numRounds, picks: initialPicks, results
       {/* Bracket grid */}
       <div className="overflow-x-auto pb-4">
         <div className="flex gap-6 min-w-fit">
-          {rounds.map((roundGames, roundIndex) => (
-            <div key={roundIndex} className="flex flex-col">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 text-center">
-                {roundNames[roundIndex] || `Round ${roundIndex + 1}`}
-              </h3>
-              <div
-                className="flex flex-col justify-around flex-1 gap-2"
-                style={{ minWidth: 220 }}
-              >
-                {roundGames.map((game) => {
-                  if (game.isBye) {
-                    const byeTeam = game.topTeamName || game.bottomTeamName;
+          {rounds.map((roundGames, roundIndex) => {
+            const slotH = SLOT_HEIGHT * Math.pow(2, roundIndex);
+            const isLastRound = roundIndex === rounds.length - 1;
+
+            // Group games by nextGameNumber to identify pairs for connectors
+            const pairs = new Map<number, Game[]>();
+            for (const game of roundGames) {
+              if (game.nextGameNumber == null) continue;
+              const arr = pairs.get(game.nextGameNumber) ?? [];
+              arr.push(game);
+              pairs.set(game.nextGameNumber, arr);
+            }
+
+            return (
+              <div key={roundIndex} className="flex flex-col flex-shrink-0" style={{ minWidth: 220 }}>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 text-center">
+                  {roundNames[roundIndex] || `Round ${roundIndex + 1}`}
+                </h3>
+
+                <div className="relative" style={{ height: totalHeight }}>
+                  {/* Game cards — absolutely positioned */}
+                  {roundGames.map((game) => {
+                    const gameCenterY = (game.position - 0.5) * slotH;
+                    const gameTop = Math.max(0, gameCenterY - GAME_CARD_HEIGHT / 2);
+
+                    if (game.isBye) {
+                      const byeTeam = game.topTeamName || game.bottomTeamName;
+                      return (
+                        <div
+                          key={game.gameNumber}
+                          className="absolute left-0 right-0 opacity-50"
+                          style={{ top: gameTop }}
+                        >
+                          <div className="text-xs text-slate-400 mb-1">BYE</div>
+                          <div className="px-3 py-2 bg-slate-100 rounded text-sm text-slate-500 border border-slate-200">
+                            {byeTeam || "BYE"} →
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const [topTeam, bottomTeam] = getTeams(game);
+                    const currentPick = picks[game.gameNumber];
+                    const result = results[game.gameNumber];
+                    const isCorrect = result && currentPick === result;
+                    const isIncorrect = result && currentPick && currentPick !== result;
+                    const topCount = pickCounts?.[game.gameNumber]?.[topTeam ?? ""] ?? 0;
+                    const bottomCount = pickCounts?.[game.gameNumber]?.[bottomTeam ?? ""] ?? 0;
+
                     return (
-                      <div key={game.gameNumber} className="flex flex-col gap-0.5 opacity-60">
-                        <div className="text-xs text-slate-400 mb-1">Game {game.gameNumber} (BYE)</div>
-                        <div className="px-3 py-2 bg-slate-100 rounded text-sm text-slate-600 border border-slate-200">
-                          {byeTeam || "BYE"} → advances
+                      <div
+                        key={game.gameNumber}
+                        className="absolute left-0 right-0 flex flex-col gap-0.5"
+                        style={{ top: gameTop }}
+                      >
+                        <div className="text-xs text-slate-400 mb-1">
+                          Game {game.gameNumber}
+                          {result && (
+                            <span className="ml-2 text-xs font-medium text-slate-600">
+                              Final: {result}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`border rounded-lg overflow-hidden ${
+                            isCorrect
+                              ? "border-green-400 ring-1 ring-green-200"
+                              : isIncorrect
+                              ? "border-red-400 ring-1 ring-red-200"
+                              : "border-slate-200"
+                          }`}
+                        >
+                          <TeamButton
+                            team={topTeam}
+                            label={game.topSeedLabel}
+                            selected={currentPick === topTeam && !!topTeam}
+                            isWinner={result === topTeam && !!topTeam}
+                            isLoser={!!result && result !== topTeam && !!topTeam}
+                            disabled={locked || !topTeam}
+                            pickCount={locked && totalPlayers ? topCount : undefined}
+                            totalPlayers={totalPlayers}
+                            onClick={() => topTeam && handlePick(game.gameNumber, topTeam)}
+                          />
+                          <div className="border-t border-slate-200" />
+                          <TeamButton
+                            team={bottomTeam}
+                            label={game.bottomSeedLabel}
+                            selected={currentPick === bottomTeam && !!bottomTeam}
+                            isWinner={result === bottomTeam && !!bottomTeam}
+                            isLoser={!!result && result !== bottomTeam && !!bottomTeam}
+                            disabled={locked || !bottomTeam}
+                            pickCount={locked && totalPlayers ? bottomCount : undefined}
+                            totalPlayers={totalPlayers}
+                            onClick={() => bottomTeam && handlePick(game.gameNumber, bottomTeam)}
+                          />
                         </div>
                       </div>
                     );
-                  }
+                  })}
 
-                  const [topTeam, bottomTeam] = getTeams(game);
-                  const currentPick = picks[game.gameNumber];
-                  const result = results[game.gameNumber];
-                  const isCorrect = result && currentPick === result;
-                  const isIncorrect = result && currentPick && currentPick !== result;
-
-                  return (
-                    <div key={game.gameNumber} className="flex flex-col gap-0.5">
-                      <div className="text-xs text-slate-400 mb-1">
-                        Game {game.gameNumber}
-                        {result && (
-                          <span className="ml-2 text-xs font-medium text-slate-600">
-                            Final: {result}
-                          </span>
-                        )}
-                      </div>
+                  {/* Left arms: horizontal lines from gap midpoint to each game (rounds > 0) */}
+                  {roundIndex > 0 && roundGames.map((game) => {
+                    if (game.isBye) return null;
+                    const cy = (game.position - 0.5) * slotH;
+                    return (
                       <div
-                        className={`border rounded-lg overflow-hidden ${
-                          isCorrect
-                            ? "border-green-400 ring-1 ring-green-200"
-                            : isIncorrect
-                            ? "border-red-400 ring-1 ring-red-200"
-                            : "border-slate-200"
-                        }`}
-                      >
-                        <TeamButton
-                          team={topTeam}
-                          label={game.topSeedLabel}
-                          selected={currentPick === topTeam && !!topTeam}
-                          isWinner={result === topTeam && !!topTeam}
-                          isLoser={!!result && result !== topTeam && !!topTeam}
-                          disabled={locked || !topTeam}
-                          onClick={() => topTeam && handlePick(game.gameNumber, topTeam)}
-                        />
-                        <div className="border-t border-slate-200" />
-                        <TeamButton
-                          team={bottomTeam}
-                          label={game.bottomSeedLabel}
-                          selected={currentPick === bottomTeam && !!bottomTeam}
-                          isWinner={result === bottomTeam && !!bottomTeam}
-                          isLoser={!!result && result !== bottomTeam && !!bottomTeam}
-                          disabled={locked || !bottomTeam}
-                          onClick={() => bottomTeam && handlePick(game.gameNumber, bottomTeam)}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                        key={`la-${game.gameNumber}`}
+                        style={{
+                          position: "absolute",
+                          top: cy - 1,
+                          left: -(COL_GAP / 2),
+                          width: COL_GAP / 2,
+                          height: 2,
+                          backgroundColor: "#e2e8f0",
+                        }}
+                      />
+                    );
+                  })}
+
+                  {/* Right connectors: bracket arms linking pairs to next round */}
+                  {!isLastRound && [...pairs.entries()].map(([nextGN, pairGames]) => {
+                    if (pairGames.length !== 2) return null;
+                    const [topG, bottomG] = [...pairGames].sort((a, b) => a.position - b.position);
+                    const topCY = (topG.position - 0.5) * slotH;
+                    const bottomCY = (bottomG.position - 0.5) * slotH;
+                    return (
+                      <div
+                        key={`rc-${nextGN}`}
+                        style={{
+                          position: "absolute",
+                          top: topCY,
+                          height: bottomCY - topCY,
+                          right: -(COL_GAP / 2),
+                          width: COL_GAP / 2,
+                          borderTop: "2px solid #e2e8f0",
+                          borderRight: "2px solid #e2e8f0",
+                          borderBottom: "2px solid #e2e8f0",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -279,6 +363,8 @@ function TeamButton({
   isLoser,
   disabled,
   onClick,
+  pickCount,
+  totalPlayers,
 }: {
   team: string | null;
   label: string | null | undefined;
@@ -287,6 +373,8 @@ function TeamButton({
   isLoser: boolean;
   disabled: boolean;
   onClick: () => void;
+  pickCount?: number;
+  totalPlayers?: number;
 }) {
   let bgClass = "bg-white hover:bg-blue-50";
   if (selected && isWinner) bgClass = "bg-green-100";
@@ -313,6 +401,11 @@ function TeamButton({
         )}
       </span>
       <span className="flex items-center gap-1">
+        {pickCount !== undefined && (
+          <span className="text-xs text-slate-400 tabular-nums">
+            {totalPlayers ? `${pickCount}/${totalPlayers}` : pickCount}
+          </span>
+        )}
         {selected && !isWinner && !isLoser && (
           <span className="text-blue-600 text-xs font-bold">✓</span>
         )}

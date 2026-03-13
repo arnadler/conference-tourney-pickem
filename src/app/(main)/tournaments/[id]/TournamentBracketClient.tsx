@@ -34,6 +34,8 @@ interface Props {
   locked: boolean;
   tournamentId: string;
   loggedIn: boolean;
+  pickCounts: Record<number, Record<string, number>>;
+  totalPlayers: number;
 }
 
 export default function TournamentBracketClient({
@@ -44,6 +46,8 @@ export default function TournamentBracketClient({
   locked,
   tournamentId,
   loggedIn,
+  pickCounts,
+  totalPlayers,
 }: Props) {
   const router = useRouter();
 
@@ -89,6 +93,8 @@ export default function TournamentBracketClient({
       locked={locked || !loggedIn}
       onSave={handleSave}
       onSubmit={loggedIn && !locked ? () => router.push("/my-picks") : undefined}
+      pickCounts={pickCounts}
+      totalPlayers={totalPlayers}
     />
   );
 }

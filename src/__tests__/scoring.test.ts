@@ -104,7 +104,7 @@ describe("calculateTournamentScores", () => {
     const scores = calculateTournamentScores(games, picks);
     expect(scores[0].score).toBe(6); // 1 + 2 + 3
     expect(scores[0].correctPicks).toBe(3);
-    expect(scores[0].possiblePoints).toBe(6); // 1 + 2 + 3
+    expect(scores[0].maxPoints).toBe(6); // 1 + 2 + 3
   });
 
   it("sorts users by score descending", () => {
@@ -131,12 +131,12 @@ describe("calculateTournamentScores", () => {
 describe("calculateOverallScores", () => {
   it("aggregates scores across tournaments", () => {
     const tournament1Scores = [
-      { userId: "user1", userName: "User 1", userEmail: "u1@test.com", score: 3, totalPicks: 5, correctPicks: 3, possiblePoints: 5 },
-      { userId: "user2", userName: "User 2", userEmail: "u2@test.com", score: 2, totalPicks: 5, correctPicks: 2, possiblePoints: 5 },
+      { userId: "user1", userName: "User 1", userEmail: "u1@test.com", score: 3, totalPicks: 5, correctPicks: 3, maxPoints: 5 },
+      { userId: "user2", userName: "User 2", userEmail: "u2@test.com", score: 2, totalPicks: 5, correctPicks: 2, maxPoints: 5 },
     ];
     const tournament2Scores = [
-      { userId: "user1", userName: "User 1", userEmail: "u1@test.com", score: 1, totalPicks: 3, correctPicks: 1, possiblePoints: 3 },
-      { userId: "user2", userName: "User 2", userEmail: "u2@test.com", score: 3, totalPicks: 3, correctPicks: 3, possiblePoints: 3 },
+      { userId: "user1", userName: "User 1", userEmail: "u1@test.com", score: 1, totalPicks: 3, correctPicks: 1, maxPoints: 3 },
+      { userId: "user2", userName: "User 2", userEmail: "u2@test.com", score: 3, totalPicks: 3, correctPicks: 3, maxPoints: 3 },
     ];
 
     const map = new Map<string, typeof tournament1Scores>();
