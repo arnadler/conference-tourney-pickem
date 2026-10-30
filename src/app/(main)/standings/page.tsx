@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { calculateTournamentScores, calculateOverallScores, type UserScore } from "@/lib/scoring";
 import Link from "next/link";
+import { displayName } from "@/lib/display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ function StandingsTable({
                   href={tournamentId ? `/user/${s.userId}?tournament=${tournamentId}` : `/user/${s.userId}`}
                   className="text-blue-600 hover:text-blue-800 font-medium"
                 >
-                  {s.userName || s.userEmail || "Anonymous"}
+                  {displayName(s.userName, s.userEmail)}
                 </Link>
               </td>
               <td className="px-4 py-3 text-right font-bold text-slate-900">{s.score}</td>

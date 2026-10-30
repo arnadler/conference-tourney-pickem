@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { displayName } from "@/lib/display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function UserDetailPage({
       </Link>
 
       <h1 className="text-3xl font-bold text-slate-900 mb-8">
-        {user.name || user.email || "User"}&apos;s Picks
+        {displayName(user.name, user.email, "User")}&apos;s Picks
       </h1>
 
       {tournaments.map((t) => (

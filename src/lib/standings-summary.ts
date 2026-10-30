@@ -1,5 +1,6 @@
 import type { Game, Pick } from "@/generated/prisma/client";
 import type { UserScore } from "./scoring";
+import { displayName as publicName } from "./display-name";
 
 type PickWithUser = Pick & { user: { name: string | null; email: string | null } };
 
@@ -12,7 +13,7 @@ type TournamentData = {
 };
 
 function displayName(s: UserScore): string {
-  return s.userName || s.userEmail || "Unknown";
+  return publicName(s.userName, s.userEmail, "Unknown");
 }
 
 export function buildStandingsSummary(
@@ -78,7 +79,7 @@ export function buildStandingsSummary(
 
         const byTeam = new Map<string, string[]>();
         for (const pick of gamePicks) {
-          const name = pick.user.name || pick.user.email || "?";
+          const name = publicName(pick.user.name, pick.user.email, "?");
           const existing = byTeam.get(pick.selectedTeam) ?? [];
           existing.push(name);
           byTeam.set(pick.selectedTeam, existing);
